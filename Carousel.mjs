@@ -1,18 +1,33 @@
-import { favorite } from "./index.mjs";
+import { favorite, isFavorite, removeFavorite } from "./index.mjs";
 
 export function createCarouselItem(imgSrc, imgAlt, imgId) {
   const template = document.querySelector("#carouselItemTemplate");
   const clone = template.content.firstElementChild.cloneNode(true);
+  const favBtn = clone.querySelector(".favorite-button");
 
   const img = clone.querySelector("img");
+
   img.src = imgSrc;
   img.alt = imgAlt;
 
-  const favBtn = clone.querySelector(".favorite-button");
-  favBtn.addEventListener("click", () => {
-    favorite(imgId);
+  isFavorite(imgId).then((result) => {
+    if (result.isFavorite) {
+      favBtn.classList.remove("favorite-button");
+      favBtn.classList.add("is-favorite-button");
+    } else {
+      favBtn.classList.remove("is-favorite-button");
+      favBtn.classList.add("favorite-button");
+    }
   });
 
+  favBtn.addEventListener("click", async () => {
+    const result = await isFavorite(imgId);
+    if (result.isFavorite) {
+      await removeFavorite(result.favoriteId);
+    } else {
+      await favorite(imgId);
+    }
+  });
   return clone;
 }
 

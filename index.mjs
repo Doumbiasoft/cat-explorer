@@ -2,6 +2,8 @@ import * as Carousel from "./Carousel.mjs";
 
 //simulate current user
 const sub_id = "main_user";
+let selectedBreedValue = "";
+let listType = "BreadList"; //BreadList or FavoriteList. by default it BreadList
 // Base url
 const baseURL = " https://api.thecatapi.com/v1";
 // The breed selection input element.
@@ -151,6 +153,7 @@ const getSelectedBreedUsingAxios = async (selectedValue) => {
     );
     let data = response.data;
     console.log(`💽`, data);
+    listType = "BreadList";
     return data;
   } catch (error) {
     console.error("❌ Error - getSelectedBreedUsingFetch : ", error.message);
@@ -161,10 +164,10 @@ const handleBreedSelected = async (e) => {
   try {
     Carousel.clear();
     $infoDump.innerHTML = "";
-    const selectedValue = e.target.value;
-    if (selectedValue === "") return;
-    //let data = await getSelectedBreedUsingFetch(selectedValue);
-    let data = await getSelectedBreedUsingAxios(selectedValue);
+    selectedBreedValue = e.target.value;
+    if (selectedBreedValue === "") return;
+    //let data = await getSelectedBreedUsingFetch(selectedBreedValue);
+    let data = await getSelectedBreedUsingAxios(selectedBreedValue);
     let breed = data[0].breeds[0];
     createInfoDisplayElements(breed);
     loadCarousel(data);
@@ -275,29 +278,84 @@ const updateProgress = (progressEvent) => {
 export const favorite = async (imgId) => {
   try {
     console.log(`🔥 click favorite ${imgId}`);
-
     const favoriteData = {
       image_id: imgId,
       sub_id: sub_id,
     };
-
     const response = await axiosInstance.post("/favourites", favoriteData);
     if (response.status === 200 || response.status === 201) {
       console.log(`🎯 Favorite successfully added ${imgId}`);
       console.log("Response:", response.data);
+      if (listType === "BreadList") {
+        Carousel.clear();
+        $infoDump.innerHTML = "";
+        let data = await getSelectedBreedUsingAxios(selectedBreedValue);
+        let breed = data[0].breeds[0];
+        createInfoDisplayElements(breed);
+        loadCarousel(data);
+        $favTitle.style.display = "none";
+      } else {
+        await handleGetFavorites();
+      }
       return response.data;
     } else {
       console.error("😱 Unexpected response status:", response.status);
     }
   } catch (error) {
-    console.error(`❌ Error adding favorite ${imgId}:`, error.message);
+    console.error(`❌ Error - adding favorite ${imgId}:`, error.message);
   }
 };
+// Remove from favorites
+export const removeFavorite = async (favoriteId) => {
+  try {
+    const response = await axiosInstance.delete(`/favourites/${favoriteId}`);
+    if (response.status === 200) {
+      console.log(`🗑️ Favorite removed: ${favoriteId}`);
+
+      if (listType === "BreadList") {
+        Carousel.clear();
+        $infoDump.innerHTML = "";
+        let data = await getSelectedBreedUsingAxios(selectedBreedValue);
+        let breed = data[0].breeds[0];
+        createInfoDisplayElements(breed);
+        loadCarousel(data);
+        $favTitle.style.display = "none";
+      } else {
+        await handleGetFavorites();
+      }
+
+      return response.data;
+    }
+  } catch (error) {
+    console.error(`❌ Error - removing favorite ${favoriteId}:`, error);
+    throw error;
+  }
+};
+
+// Check if an image is in favorites
+export const isFavorite = async (imageId) => {
+  try {
+    const response = await axiosInstance.get(`/favourites?sub_id=${sub_id}`);
+    if (response.status === 200) {
+      const favorites = response.data;
+      const favoriteItem = favorites.find((fav) => fav.image_id === imageId);
+      return {
+        isFavorite: !!favoriteItem,
+        favoriteId: favoriteItem ? favoriteItem.id : null,
+      };
+    }
+    return { isFavorite: false, favoriteId: null };
+  } catch (error) {
+    console.error(`❌ Error checking if ${imageId} is favorite:`, error);
+    return { isFavorite: false, favoriteId: null };
+  }
+};
+
 // handler to get all favorites
 const handleGetFavorites = async () => {
   let data = await getFavorites();
   Carousel.clear();
-
+  listType = "FavoriteList";
   $infoDump.innerHTML = "";
   for (let i = 0; i < data.length; i++) {
     let breed = data[i].breeds[0];
@@ -312,7 +370,6 @@ const getFavorites = async () => {
     const favoritesResponse = await axiosInstance.get(
       `/favourites?sub_id=${sub_id}`
     );
-
     if (favoritesResponse.status === 200) {
       const basicFavorites = favoritesResponse.data;
       // Extract just the image iDs
