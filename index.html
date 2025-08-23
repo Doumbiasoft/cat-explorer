@@ -26,8 +26,9 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
     <!-- Our Scripts -->
-    <script defer type="module" src="Carousel.mjs"></script>
     <script defer type="module" src="index.mjs"></script>
+    <script defer type="module" src="Carousel.mjs"></script>
+
 </head>
 
 <body>
@@ -36,7 +37,7 @@
 
     <!-- Breed Selection -->
     <h2 class="w-100 text-center mt-5">Select a Breed</h2>
-    <select id="breedSelect" style="width: 300px;" class="form-select form-select-lg my-1 mx-auto"
+    <select id="breedSelect" style="width: 300px; cursor: pointer;" class="form-select form-select-lg my-1 mx-auto"
         aria-label="form-select-lg">
     </select>
     <div class="d-flex mt-3">
@@ -44,7 +45,7 @@
             Get Favorites
         </button>
     </div>
-
+    <h1 class="mx-4 favTitle" style="display: none;">❤️ Favorites</h1>
     <!-- Carousel -->
     <div id="carouselExampleControls" class="carousel" data-bs-ride="carousel">
         <div id="carouselInner" class="carousel-inner"></div>
@@ -131,7 +132,7 @@
             <div class="card">
                 <div class="img-wrapper">
                     <img src="https://via.placeholder.com/600/92c952" class="d-block w-100" alt="..." />
-                    <div data-img-id="" class="favourite-button">
+                    <div data-img-id="" class="favorite-button">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor">
                             <!--! Font Awesome Pro 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. -->
                             <path

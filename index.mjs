@@ -1,5 +1,7 @@
 import * as Carousel from "./Carousel.mjs";
 
+//simulate current user
+const sub_id = "main_user";
 // Base url
 const baseURL = " https://api.thecatapi.com/v1";
 // The breed selection input element.
@@ -12,6 +14,8 @@ const $progressBar = document.getElementById("progressBar");
 const $getFavoritesBtn = document.getElementById("getFavoritesBtn");
 // The breed info template
 const $infoDumpItemTemplate = document.querySelector("#infoDumpItemTemplate");
+// The favorite title
+const $favTitle = document.querySelector(".favTitle");
 // Step 0: Store your API key here for reference and easy access.
 const API_KEY =
   "live_7abJmYpYBVV0FaLAA2kCXZJ5dKSUZh51d4vS9xMmQV9zdDMxFzEU1NlQtVlzwTdj";
@@ -21,7 +25,7 @@ const headers = {
 // define an instance of axios and add default setting
 const axiosInstance = axios.create({
   baseURL: baseURL,
-  timeout: 5000,
+  timeout: 10000,
   headers: headers,
 });
 axiosInstance.interceptors.request.use(
@@ -36,7 +40,7 @@ axiosInstance.interceptors.request.use(
     );
     return {
       ...req,
-      onDownloadProgress: handleDownloadProgress,
+      onDownloadProgress: updateProgress,
     };
   },
   (error) => {
@@ -72,6 +76,286 @@ axiosInstance.interceptors.response.use(
     throw error;
   }
 );
+
+const initialLoad = async () => {
+  //let data = await getBreedsUsingFetch();
+  let data = await getBreedsUsingAxios();
+  loadBreedOptions(data);
+};
+// Populate select options with breeds
+const loadBreedOptions = (data) => {
+  try {
+    const option = document.createElement("option");
+    option.value = "";
+    option.innerHTML = `-- --`;
+    $breedSelect.appendChild(option);
+    data = data.filter((img) => img.image?.url !== null);
+    for (let i = 0; i < data.length; i++) {
+      const breed = data[i];
+      const option = document.createElement("option");
+      //skip any breeds that do not have an image
+      if (!breed.image) continue;
+      option.value = breed.id;
+      option.innerHTML = `${breed.name}`;
+      $breedSelect.appendChild(option);
+    }
+    Carousel.clear();
+    Carousel.start();
+  } catch (error) {
+    console.error("❌ Error - loadBreedOptions : ", error.message);
+  }
+};
+// get breeds using Fetch
+const getBreedsUsingFetch = async () => {
+  try {
+    const response = await fetch(`${baseURL}/breeds`, {
+      headers,
+    });
+    let data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("❌ Error - getBreedsUsingFetch : ", error.message);
+  }
+};
+// get selected breed selected using Fetch
+const getSelectedBreedUsingFetch = async (selectedValue) => {
+  try {
+    const response = await fetch(
+      `${baseURL}/images/search?breed_id=${selectedValue}&limit=20`,
+      {
+        headers,
+      }
+    );
+    let data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("❌ Error - getSelectedBreedUsingFetch : ", error.message);
+  }
+};
+// get breeds using Axios
+const getBreedsUsingAxios = async () => {
+  try {
+    const response = await axiosInstance.get("/breeds");
+    let data = response.data;
+
+    return data;
+  } catch (error) {
+    console.error("❌ Error - getBreedsUsingAxios : ", error.message);
+  }
+};
+// get selected breed selected using Axios
+const getSelectedBreedUsingAxios = async (selectedValue) => {
+  try {
+    const response = await axiosInstance.get(
+      `/images/search?breed_id=${selectedValue}&limit=20`
+    );
+    let data = response.data;
+    console.log(`💽`, data);
+    return data;
+  } catch (error) {
+    console.error("❌ Error - getSelectedBreedUsingFetch : ", error.message);
+  }
+};
+// Handler for breed select options
+const handleBreedSelected = async (e) => {
+  try {
+    Carousel.clear();
+    $infoDump.innerHTML = "";
+    const selectedValue = e.target.value;
+    if (selectedValue === "") return;
+    //let data = await getSelectedBreedUsingFetch(selectedValue);
+    let data = await getSelectedBreedUsingAxios(selectedValue);
+    let breed = data[0].breeds[0];
+    createInfoDisplayElements(breed);
+    loadCarousel(data);
+    $favTitle.style.display = "none";
+  } catch (error) {
+    console.error("❌ Error - handleBreedSelected : ", error.message);
+  }
+};
+// Function to load the carousel with the data fetch
+const loadCarousel = (data) => {
+  try {
+    for (let i = 0; i < data.length; i++) {
+      const imageURL = data[i].url;
+      const imageId = data[i].id;
+      const imageAltName =
+        data[i].breeds[0].alt_names !== ""
+          ? data[i].breeds[0].alt_names
+          : data[i].breeds[0].name;
+      const carouselItem = Carousel.createCarouselItem(
+        imageURL,
+        imageAltName,
+        imageId
+      );
+      Carousel.appendCarousel(carouselItem);
+    }
+    Carousel.start();
+  } catch (error) {
+    console.error("❌ Error - loadCarousel : ", error.message);
+  }
+};
+// Function to generate stars based on the star number
+const createStars = (number) => {
+  try {
+    let result = "";
+    let noStar = "";
+    for (let i = 1; i <= number; i++) {
+      result += "⭐️";
+    }
+    if (number < 5) {
+      noStar = "";
+      let noStarNumber = 5 - number;
+      for (let i = 1; i <= noStarNumber; i++) {
+        noStar += "☆";
+      }
+    }
+    return result + noStar;
+  } catch (error) {
+    console.error("❌ Error - createStars : ", error.message);
+  }
+};
+
+// Function to create and display a breed info
+const createInfoDisplayElements = (breed) => {
+  const $clone =
+    $infoDumpItemTemplate.content.firstElementChild.cloneNode(true);
+  const $name = $clone.querySelector(".name");
+  const $origin = $clone.querySelector(".origin");
+  const $description = $clone.querySelector(".description");
+  const $temperament = $clone.querySelector(".temperament");
+  const $lifeSpan = $clone.querySelector(".life-span");
+  const $weight = $clone.querySelector(".weight");
+  const $adaptability = $clone.querySelector(".adaptability");
+  const $affection = $clone.querySelector(".affection");
+  const $childFriendly = $clone.querySelector(".child-friendly");
+  const $dogFriendly = $clone.querySelector(".dog-friendly");
+  const $intelligence = $clone.querySelector(".intelligence");
+  const $energieLevel = $clone.querySelector(".energie-level");
+  const $grooming = $clone.querySelector(".grooming");
+  const $wiki = $clone.querySelector("#wiki");
+  const $vets = $clone.querySelector("#vets");
+
+  $name.innerHTML = breed.name;
+  $origin.innerHTML = breed.origin;
+  $description.innerHTML = breed.description;
+  $temperament.innerHTML = breed.temperament;
+  $lifeSpan.innerHTML = breed.life_span;
+  $weight.innerHTML = breed.weight.imperial;
+  $adaptability.innerHTML = createStars(Number(breed.adaptability));
+  $affection.innerHTML = createStars(Number(breed.affection_level));
+  $childFriendly.innerHTML = createStars(Number(breed.child_friendly));
+  $dogFriendly.innerHTML = createStars(Number(breed.dog_friendly));
+  $intelligence.innerHTML = createStars(Number(breed.intelligence));
+  $energieLevel.innerHTML = createStars(Number(breed.energy_level));
+  $grooming.innerHTML = createStars(Number(breed.grooming));
+  $wiki.href = breed.wikipedia_url;
+  if (breed.vetstreet_url) {
+    $vets.href = breed.vetstreet_url;
+  } else {
+    $vets.style.display = "none";
+  }
+  $infoDump.appendChild($clone);
+};
+// Define the progress handler function
+const updateProgress = (progressEvent) => {
+  if (progressEvent.lengthComputable) {
+    const percentCompleted = Math.round(
+      (progressEvent.loaded * 100) / progressEvent.total
+    );
+    $progressBar.style.width = `${percentCompleted}%`;
+    console.log(`📊 Download progress: ${percentCompleted}%`);
+  } else {
+    $progressBar.style.width = `100%`;
+    console.log(
+      `📦 Download progress: ${progressEvent.loaded} bytes loaded (total unknown)`
+    );
+  }
+};
+export const favorite = async (imgId) => {
+  try {
+    console.log(`🔥 click favorite ${imgId}`);
+
+    const favoriteData = {
+      image_id: imgId,
+      sub_id: sub_id,
+    };
+
+    const response = await axiosInstance.post("/favourites", favoriteData);
+    if (response.status === 200 || response.status === 201) {
+      console.log(`🎯 Favorite successfully added ${imgId}`);
+      console.log("Response:", response.data);
+      return response.data;
+    } else {
+      console.error("😱 Unexpected response status:", response.status);
+    }
+  } catch (error) {
+    console.error(`❌ Error adding favorite ${imgId}:`, error.message);
+  }
+};
+// handler to get all favorites
+const handleGetFavorites = async () => {
+  let data = await getFavorites();
+  Carousel.clear();
+
+  $infoDump.innerHTML = "";
+  for (let i = 0; i < data.length; i++) {
+    let breed = data[i].breeds[0];
+    console.log(`🐈 Favorites breed ${i}:`, breed);
+    createInfoDisplayElements(breed);
+  }
+  $favTitle.style.display = "block";
+  loadCarousel(data);
+};
+const getFavorites = async () => {
+  try {
+    const favoritesResponse = await axiosInstance.get(
+      `/favourites?sub_id=${sub_id}`
+    );
+
+    if (favoritesResponse.status === 200) {
+      const basicFavorites = favoritesResponse.data;
+      // Extract just the image iDs
+      const imageIds = basicFavorites.map((fav) => fav.image_id);
+      // Fetch complete image data for all favorite images
+      const imagePromises = imageIds.map(async (imageId) => {
+        try {
+          const response = await axiosInstance.get(`/images/${imageId}`);
+          return response.data;
+        } catch (error) {
+          console.warn(`⚠️ Could not fetch image ${imageId}:`, error.message);
+          return null;
+        }
+      });
+      const imagesWithBreeds = await Promise.all(imagePromises);
+      // Filter out null results and format
+      const formattedFavorites = imagesWithBreeds
+        .filter(Boolean)
+        .map((image) => ({
+          breeds: image.breeds || [],
+          id: image.id,
+          url: image.url,
+          width: image.width,
+          height: image.height,
+        }));
+
+      console.log("🎯 Favorites formatted:", formattedFavorites);
+      return formattedFavorites;
+    }
+  } catch (error) {
+    console.error("❌ Error getting formatted favorites:", error);
+    throw error;
+  }
+};
+
+(function () {
+  initialLoad();
+})();
+// Select breed option eventListener
+$breedSelect.addEventListener("change", handleBreedSelected);
+// Get Favorites list button eventListener
+$getFavoritesBtn.addEventListener("click", handleGetFavorites);
+
 /**
  * 1. Create an async function "initialLoad" that does the following:
  * - Retrieve a list of breeds from the cat API using fetch().
@@ -124,7 +408,7 @@ axiosInstance.interceptors.response.use(
  * - Research the axios onDownloadProgress config option.
  * - Create a function "updateProgress" that receives a ProgressEvent object.
  *  - Pass this function to the axios onDownloadProgress config option in your event handler.
- * - console.log your ProgressEvent object within updateProgess, and familiarize yourself with its structure.
+ * - console.log your ProgressEvent object within updateProgress, and familiarize yourself with its structure.
  *  - Update the progress of the request using the properties you are given.
  * - Note that we are not downloading a lot of data, so onDownloadProgress will likely only fire
  *   once or twice per request to this API. This is still a concept worth familiarizing yourself
@@ -137,25 +421,22 @@ axiosInstance.interceptors.response.use(
  * - In your response interceptor, remove the progress cursor style from the body element.
  */
 /**
- * 8. To practice posting data, we'll create a system to "favourite" certain images.
+ * 8. To practice posting data, we'll create a system to "favorite" certain images.
  * - The skeleton of this function has already been created for you.
  * - This function is used within Carousel.js to add the event listener as items are created.
  *  - This is why we use the export keyword for this function.
- * - Post to the cat API's favourites endpoint with the given ID.
+ * - Post to the cat API's favorites endpoint with the given ID.
  * - The API documentation gives examples of this functionality using fetch(); use Axios!
- * - Add additional logic to this function such that if the image is already favourited,
- *   you delete that favourite using the API, giving this function "toggle" functionality.
+ * - Add additional logic to this function such that if the image is already favored,
+ *   you delete that favorite using the API, giving this function "toggle" functionality.
  * - You can call this function by clicking on the heart at the top right of any image.
  */
-export async function favorite(imgId) {
-  // your code here
-}
 
 /**
- * 9. Test your favourite() function by creating a getFavourites() function.
- * - Use Axios to get all of your favourites from the cat API.
- * - Clear the carousel and display your favourites when the button is clicked.
- *  - You will have to bind this event listener to getFavouritesBtn yourself.
+ * 9. Test your favorite() function by creating a getFavorites() function.
+ * - Use Axios to get all of your favorites from the cat API.
+ * - Clear the carousel and display your favorites when the button is clicked.
+ *  - You will have to bind this event listener to getFavoritesBtn yourself.
  *  - Hint: you already have all of the logic built for building a carousel.
  *    If that isn't in its own function, maybe it should be so you don't have to
  *    repeat yourself in this section.
@@ -168,189 +449,3 @@ export async function favorite(imgId) {
  * - Test other breeds as well. Not every breed has the same data available, so
  *   your code should account for this.
  */
-
-const initialLoad = async () => {
-  //let data = await getBreedsUsingFetch();
-  let data = await getBreedsUsingAxios();
-  loadBreedOptions(data);
-};
-// Populate select options with breeds
-const loadBreedOptions = (data) => {
-  const option = document.createElement("option");
-  option.value = "";
-  option.innerHTML = `-- --`;
-  $breedSelect.appendChild(option);
-  data = data.filter((img) => img.image?.url !== null);
-  for (let i = 0; i < data.length; i++) {
-    const breed = data[i];
-    const option = document.createElement("option");
-    //skip any breeds that do not have an image
-    if (!breed.image) continue;
-    option.value = breed.id;
-    option.innerHTML = `${breed.name}`;
-    $breedSelect.appendChild(option);
-  }
-  Carousel.clear();
-  Carousel.start();
-};
-// get breeds using Fetch
-const getBreedsUsingFetch = async () => {
-  try {
-    const response = await fetch(`${baseURL}/breeds`, {
-      headers,
-    });
-    let data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("❌ Error - getBreedsUsingFetch : ", error.message);
-  }
-};
-// get selected breed selected using Fetch
-const getSelectedBreedUsingFetch = async (selectedValue) => {
-  try {
-    const response = await fetch(
-      `${baseURL}/images/search?breed_id=${selectedValue}&limit=20`,
-      {
-        headers,
-      }
-    );
-    let data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("❌ Error - getSelectedBreedUsingFetch : ", error.message);
-  }
-};
-// get breeds using Axios
-const getBreedsUsingAxios = async () => {
-  try {
-    const response = await axiosInstance.get("/breeds");
-    let data = response.data;
-    return data;
-  } catch (error) {
-    console.error("❌ Error - getBreedsUsingAxios : ", error.message);
-  }
-};
-// get selected breed selected using Axios
-const getSelectedBreedUsingAxios = async (selectedValue) => {
-  try {
-    const response = await axiosInstance.get(
-      `/images/search?breed_id=${selectedValue}&limit=20`
-    );
-    let data = response.data;
-    return data;
-  } catch (error) {
-    console.error("❌ Error - getSelectedBreedUsingFetch : ", error.message);
-  }
-};
-// Handler for breed select options
-const handleBreedSelected = async (e) => {
-  Carousel.clear();
-  $infoDump.innerHTML = "";
-  const selectedValue = e.target.value;
-  if (selectedValue === "") return;
-  //let data = await getSelectedBreedUsingFetch(selectedValue);
-  let data = await getSelectedBreedUsingAxios(selectedValue);
-  let breed = data[0].breeds[0];
-  createInfoDumpElements(breed);
-  loadCarousel(data);
-};
-// Function to load the carousel with the data fetch
-const loadCarousel = (data) => {
-  for (let i = 0; i < data.length; i++) {
-    const imageURL = data[i].url;
-    const imageId = data[i].id;
-    const imageAltName =
-      data[i].breeds[0].alt_names !== ""
-        ? data[i].breeds[0].alt_names
-        : data[i].breeds[0].name;
-    const carouselItem = Carousel.createCarouselItem(
-      imageURL,
-      imageAltName,
-      imageId
-    );
-    Carousel.appendCarousel(carouselItem);
-  }
-  Carousel.start();
-};
-// Function to generate stars based on the star number
-const createStars = (number) => {
-  let result = "";
-  let noStar = "";
-  for (let i = 1; i <= number; i++) {
-    result += "⭐️";
-  }
-  if (number < 5) {
-    noStar = "";
-    let noStarNumber = 5 - number;
-    for (let i = 1; i <= noStarNumber; i++) {
-      noStar += "☆";
-    }
-  }
-  return result + noStar;
-};
-
-// Function to create and display a breed info
-const createInfoDumpElements = (breed) => {
-  $infoDump.innerHTML = "";
-  const $clone =
-    $infoDumpItemTemplate.content.firstElementChild.cloneNode(true);
-
-  const $name = $clone.querySelector(".name");
-  const $origin = $clone.querySelector(".origin");
-  const $description = $clone.querySelector(".description");
-  const $temperament = $clone.querySelector(".temperament");
-  const $lifeSpan = $clone.querySelector(".life-span");
-  const $weight = $clone.querySelector(".weight");
-  const $adaptability = $clone.querySelector(".adaptability");
-  const $affection = $clone.querySelector(".affection");
-  const $childFriendly = $clone.querySelector(".child-friendly");
-  const $dogFriendly = $clone.querySelector(".dog-friendly");
-  const $intelligence = $clone.querySelector(".intelligence");
-  const $energieLevel = $clone.querySelector(".energie-level");
-  const $grooming = $clone.querySelector(".grooming");
-  const $wiki = $clone.querySelector("#wiki");
-  const $vets = $clone.querySelector("#vets");
-
-  $name.innerHTML = breed.name;
-  $origin.innerHTML = breed.origin;
-  $description.innerHTML = breed.description;
-  $temperament.innerHTML = breed.temperament;
-  $lifeSpan.innerHTML = breed.life_span;
-  $weight.innerHTML = breed.weight.imperial;
-  $adaptability.innerHTML = createStars(Number(breed.adaptability));
-  $affection.innerHTML = createStars(Number(breed.affection_level));
-  $childFriendly.innerHTML = createStars(Number(breed.child_friendly));
-  $dogFriendly.innerHTML = createStars(Number(breed.dog_friendly));
-  $intelligence.innerHTML = createStars(Number(breed.intelligence));
-  $energieLevel.innerHTML = createStars(Number(breed.energy_level));
-  $grooming.innerHTML = createStars(Number(breed.grooming));
-  $wiki.href = breed.wikipedia_url;
-  if (breed.vetstreet_url) {
-    $vets.href = breed.vetstreet_url;
-  } else {
-    $vets.style.display = "none";
-  }
-  $infoDump.appendChild($clone);
-};
-// Define the progress handler function
-const handleDownloadProgress = (progressEvent) => {
-  if (progressEvent.lengthComputable) {
-    const percentCompleted = Math.round(
-      (progressEvent.loaded * 100) / progressEvent.total
-    );
-    $progressBar.style.width = `${percentCompleted}%`;
-    console.log(`📊 Download progress: ${percentCompleted}%`);
-  } else {
-    $progressBar.style.width = `100%`;
-    console.log(
-      `📦 Download progress: ${progressEvent.loaded} bytes loaded (total unknown)`
-    );
-  }
-};
-const handleGetFavorites = async () => {};
-(function () {
-  initialLoad();
-})();
-// Select breed option eventListener
-$breedSelect.addEventListener("change", handleBreedSelected);
-$getFavoritesBtn.addEventListener("click", handleGetFavorites);
