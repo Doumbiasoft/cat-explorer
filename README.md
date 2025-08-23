@@ -2,9 +2,9 @@
 
 A web application that allows users to explore different cat breeds, view images, and manage their favorite cat photos using The Cat API.
 
-## 🌐 Live at: <a href="#" title="Try Demo" target="_blank">Try Demo</a>
+## 🌐 Live at: <a href="https://doumbiasoft.github.io/cat-explorer/" title="Try Demo" target="_blank">Try Demo</a>
 
-[![Try Demo](./images/cat-explorer.png)](target-url)
+[![Try Demo](./images/cat-explorer.png)](https://doumbiasoft.github.io/cat-explorer/)
 
 ## 🚀 Features
 
