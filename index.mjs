@@ -1,7 +1,7 @@
 import * as Carousel from "./Carousel.mjs";
+
 // Base url
 const baseURL = " https://api.thecatapi.com/v1";
-
 // The breed selection input element.
 const $breedSelect = document.getElementById("breedSelect");
 // The information section div element.
@@ -10,14 +10,68 @@ const $infoDump = document.getElementById("infoDump");
 const $progressBar = document.getElementById("progressBar");
 // The get favourites button element.
 const $getFavouritesBtn = document.getElementById("getFavouritesBtn");
+// The breed info template
 const $infoDumpItemTemplate = document.querySelector("#infoDumpItemTemplate");
-
 // Step 0: Store your API key here for reference and easy access.
 const API_KEY =
   "live_7abJmYpYBVV0FaLAA2kCXZJ5dKSUZh51d4vS9xMmQV9zdDMxFzEU1NlQtVlzwTdj";
 const headers = {
   "x-api-key": API_KEY,
 };
+// define an instance of axios and add default setting
+const axiosInstance = axios.create({
+  baseURL: baseURL,
+  timeout: 5000,
+  headers: headers,
+});
+axiosInstance.interceptors.request.use(
+  (req) => {
+    $progressBar.style.width = "0%";
+    document.body.style.cursor = "progress";
+    req.metadata = req.metadata || {};
+    req.metadata.startTime = new Date().getTime();
+    const startTime = new Date().toLocaleString();
+    console.log(
+      `⏳ Request is starting at ${startTime}. (based on local time)`
+    );
+    return {
+      ...req,
+      onDownloadProgress: handleDownloadProgress,
+    };
+  },
+  (error) => {
+    $progressBar.style.width = "0%";
+    document.body.style.cursor = "";
+    return Promise.reject(error);
+  }
+);
+
+axiosInstance.interceptors.response.use(
+  (res) => {
+    res.config.metadata.endTime = new Date().getTime();
+    res.config.metadata.durationInMS =
+      res.config.metadata.endTime - res.config.metadata.startTime;
+
+    console.log(
+      `⏳ Request took ${res.config.metadata.durationInMS} milliseconds.`
+    );
+    $progressBar.style.width = "100%";
+    document.body.style.cursor = "";
+    return res;
+  },
+  (error) => {
+    error.config.metadata.endTime = new Date().getTime();
+    error.config.metadata.durationInMS =
+      error.config.metadata.endTime - error.config.metadata.startTime;
+
+    console.log(
+      `⏳ Request took ${error.config.metadata.durationInMS} milliseconds.`
+    );
+    $progressBar.style.width = "100%";
+    document.body.style.cursor = "";
+    throw error;
+  }
+);
 /**
  * 1. Create an async function "initialLoad" that does the following:
  * - Retrieve a list of breeds from the cat API using fetch().
@@ -114,9 +168,25 @@ export async function favourite(imgId) {
  * - Test other breeds as well. Not every breed has the same data available, so
  *   your code should account for this.
  */
+// Define the progress handler function
+const handleDownloadProgress = (progressEvent) => {
+  if (progressEvent.lengthComputable) {
+    const percentCompleted = Math.round(
+      (progressEvent.loaded * 100) / progressEvent.total
+    );
+    $progressBar.style.width = `${percentCompleted}%`;
+    console.log(`📊 Download progress: ${percentCompleted}%`);
+  } else {
+    $progressBar.style.width = `50%`;
+    console.log(
+      `📦 Download progress: ${progressEvent.loaded} bytes loaded (total unknown)`
+    );
+  }
+};
 
 const initialLoad = async () => {
-  let data = await getBreedsUsingFetch();
+  //let data = await getBreedsUsingFetch();
+  let data = await getBreedsUsingAxios();
   loadBreedOptions(data);
 };
 // Populate select options with breeds
@@ -150,6 +220,16 @@ const getBreedsUsingFetch = async () => {
     console.error("❌ Error - getBreedsUsingFetch : ", error.message);
   }
 };
+// get breeds using Fetch
+const getBreedsUsingAxios = async () => {
+  try {
+    const response = await axiosInstance.get("/breeds");
+    let data = response.data;
+    return data;
+  } catch (error) {
+    console.error("❌ Error - getBreedsUsingAxios : ", error.message);
+  }
+};
 // get selected breed selected using Fetch
 const getSelectedBreedUsingFetch = async (selectedValue) => {
   try {
@@ -165,13 +245,26 @@ const getSelectedBreedUsingFetch = async (selectedValue) => {
     console.error("❌ Error - getSelectedBreedUsingFetch : ", error.message);
   }
 };
+// get selected breed selected using Fetch
+const getSelectedBreedUsingAxios = async (selectedValue) => {
+  try {
+    const response = await axiosInstance.get(
+      `/images/search?breed_id=${selectedValue}&limit=20`
+    );
+    let data = response.data;
+    return data;
+  } catch (error) {
+    console.error("❌ Error - getSelectedBreedUsingFetch : ", error.message);
+  }
+};
 // Handler for breed select options
 const handleBreedSelected = async (e) => {
   Carousel.clear();
   $infoDump.innerHTML = "";
   const selectedValue = e.target.value;
   if (selectedValue === "") return;
-  let data = await getSelectedBreedUsingFetch(selectedValue);
+  //let data = await getSelectedBreedUsingFetch(selectedValue);
+  let data = await getSelectedBreedUsingAxios(selectedValue);
   let breed = data[0].breeds[0];
   createInfoDumpElements(breed);
   loadCarousel(data);
