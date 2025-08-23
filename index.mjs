@@ -24,6 +24,7 @@ const API_KEY =
 const headers = {
   "x-api-key": API_KEY,
 };
+//----------- Config ----------------------------------
 // define an instance of axios and add default setting
 const axiosInstance = axios.create({
   baseURL: baseURL,
@@ -51,7 +52,6 @@ axiosInstance.interceptors.request.use(
     return Promise.reject(error);
   }
 );
-
 axiosInstance.interceptors.response.use(
   (res) => {
     res.config.metadata.endTime = new Date().getTime();
@@ -78,6 +78,37 @@ axiosInstance.interceptors.response.use(
     throw error;
   }
 );
+//--------- End Config --------------------------------
+
+//---------- Fetch version ----------------------------
+// get breeds using Fetch
+const getBreedsUsingFetch = async () => {
+  try {
+    const response = await fetch(`${baseURL}/breeds`, {
+      headers,
+    });
+    let data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("❌ Error - getBreedsUsingFetch : ", error.message);
+  }
+};
+// get selected breed selected using Fetch
+const getSelectedBreedUsingFetch = async (selectedValue) => {
+  try {
+    const response = await fetch(
+      `${baseURL}/images/search?breed_id=${selectedValue}&limit=20`,
+      {
+        headers,
+      }
+    );
+    let data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("❌ Error - getSelectedBreedUsingFetch : ", error.message);
+  }
+};
+//---------- End Fetch version --------------------------
 
 const initialLoad = async () => {
   //let data = await getBreedsUsingFetch();
@@ -107,31 +138,26 @@ const loadBreedOptions = (data) => {
     console.error("❌ Error - loadBreedOptions : ", error.message);
   }
 };
-// get breeds using Fetch
-const getBreedsUsingFetch = async () => {
+// Function to load the carousel with the data fetch
+const loadCarousel = (data) => {
   try {
-    const response = await fetch(`${baseURL}/breeds`, {
-      headers,
-    });
-    let data = await response.json();
-    return data;
+    for (let i = 0; i < data.length; i++) {
+      const imageURL = data[i].url;
+      const imageId = data[i].id;
+      const imageAltName =
+        data[i].breeds[0].alt_names !== ""
+          ? data[i].breeds[0].alt_names
+          : data[i].breeds[0].name;
+      const carouselItem = Carousel.createCarouselItem(
+        imageURL,
+        imageAltName,
+        imageId
+      );
+      Carousel.appendCarousel(carouselItem);
+    }
+    Carousel.start();
   } catch (error) {
-    console.error("❌ Error - getBreedsUsingFetch : ", error.message);
-  }
-};
-// get selected breed selected using Fetch
-const getSelectedBreedUsingFetch = async (selectedValue) => {
-  try {
-    const response = await fetch(
-      `${baseURL}/images/search?breed_id=${selectedValue}&limit=20`,
-      {
-        headers,
-      }
-    );
-    let data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("❌ Error - getSelectedBreedUsingFetch : ", error.message);
+    console.error("❌ Error - loadCarousel : ", error.message);
   }
 };
 // get breeds using Axios
@@ -176,28 +202,6 @@ const handleBreedSelected = async (e) => {
     console.error("❌ Error - handleBreedSelected : ", error.message);
   }
 };
-// Function to load the carousel with the data fetch
-const loadCarousel = (data) => {
-  try {
-    for (let i = 0; i < data.length; i++) {
-      const imageURL = data[i].url;
-      const imageId = data[i].id;
-      const imageAltName =
-        data[i].breeds[0].alt_names !== ""
-          ? data[i].breeds[0].alt_names
-          : data[i].breeds[0].name;
-      const carouselItem = Carousel.createCarouselItem(
-        imageURL,
-        imageAltName,
-        imageId
-      );
-      Carousel.appendCarousel(carouselItem);
-    }
-    Carousel.start();
-  } catch (error) {
-    console.error("❌ Error - loadCarousel : ", error.message);
-  }
-};
 // Function to generate stars based on the star number
 const createStars = (number) => {
   try {
@@ -218,7 +222,6 @@ const createStars = (number) => {
     console.error("❌ Error - createStars : ", error.message);
   }
 };
-
 // Function to create and display a breed info
 const createInfoDisplayElements = (breed) => {
   const $clone =
@@ -275,6 +278,7 @@ const updateProgress = (progressEvent) => {
     );
   }
 };
+// Add a favorite
 export const favorite = async (imgId) => {
   try {
     console.log(`🔥 click favorite ${imgId}`);
@@ -331,7 +335,6 @@ export const removeFavorite = async (favoriteId) => {
     throw error;
   }
 };
-
 // Check if an image is in favorites
 export const isFavorite = async (imageId) => {
   try {
@@ -350,11 +353,11 @@ export const isFavorite = async (imageId) => {
     return { isFavorite: false, favoriteId: null };
   }
 };
-
-// handler to get all favorites
+// Handler to get all favorites
 const handleGetFavorites = async () => {
   let data = await getFavorites();
   Carousel.clear();
+  $breedSelect.value = "";
   listType = "FavoriteList";
   $infoDump.innerHTML = "";
   for (let i = 0; i < data.length; i++) {
@@ -365,6 +368,7 @@ const handleGetFavorites = async () => {
   $favTitle.style.display = "block";
   loadCarousel(data);
 };
+// Get all favorite
 const getFavorites = async () => {
   try {
     const favoritesResponse = await axiosInstance.get(
@@ -404,7 +408,7 @@ const getFavorites = async () => {
     throw error;
   }
 };
-
+//Main
 (function () {
   initialLoad();
 })();
