@@ -1,4 +1,4 @@
-import { favourite } from "./index.mjs";
+import { favorite } from "./index.mjs";
 
 export function createCarouselItem(imgSrc, imgAlt, imgId) {
   const template = document.querySelector("#carouselItemTemplate");
@@ -10,7 +10,7 @@ export function createCarouselItem(imgSrc, imgAlt, imgId) {
 
   const favBtn = clone.querySelector(".favourite-button");
   favBtn.addEventListener("click", () => {
-    favourite(imgId);
+    favorite(imgId);
   });
 
   return clone;

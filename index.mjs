@@ -8,8 +8,8 @@ const $breedSelect = document.getElementById("breedSelect");
 const $infoDump = document.getElementById("infoDump");
 // The progress bar div element.
 const $progressBar = document.getElementById("progressBar");
-// The get favourites button element.
-const $getFavouritesBtn = document.getElementById("getFavouritesBtn");
+// The get favorites button element.
+const $getFavoritesBtn = document.getElementById("getFavoritesBtn");
 // The breed info template
 const $infoDumpItemTemplate = document.querySelector("#infoDumpItemTemplate");
 // Step 0: Store your API key here for reference and easy access.
@@ -147,7 +147,7 @@ axiosInstance.interceptors.response.use(
  *   you delete that favourite using the API, giving this function "toggle" functionality.
  * - You can call this function by clicking on the heart at the top right of any image.
  */
-export async function favourite(imgId) {
+export async function favorite(imgId) {
   // your code here
 }
 
@@ -168,21 +168,6 @@ export async function favourite(imgId) {
  * - Test other breeds as well. Not every breed has the same data available, so
  *   your code should account for this.
  */
-// Define the progress handler function
-const handleDownloadProgress = (progressEvent) => {
-  if (progressEvent.lengthComputable) {
-    const percentCompleted = Math.round(
-      (progressEvent.loaded * 100) / progressEvent.total
-    );
-    $progressBar.style.width = `${percentCompleted}%`;
-    console.log(`📊 Download progress: ${percentCompleted}%`);
-  } else {
-    $progressBar.style.width = `50%`;
-    console.log(
-      `📦 Download progress: ${progressEvent.loaded} bytes loaded (total unknown)`
-    );
-  }
-};
 
 const initialLoad = async () => {
   //let data = await getBreedsUsingFetch();
@@ -220,16 +205,6 @@ const getBreedsUsingFetch = async () => {
     console.error("❌ Error - getBreedsUsingFetch : ", error.message);
   }
 };
-// get breeds using Fetch
-const getBreedsUsingAxios = async () => {
-  try {
-    const response = await axiosInstance.get("/breeds");
-    let data = response.data;
-    return data;
-  } catch (error) {
-    console.error("❌ Error - getBreedsUsingAxios : ", error.message);
-  }
-};
 // get selected breed selected using Fetch
 const getSelectedBreedUsingFetch = async (selectedValue) => {
   try {
@@ -245,7 +220,17 @@ const getSelectedBreedUsingFetch = async (selectedValue) => {
     console.error("❌ Error - getSelectedBreedUsingFetch : ", error.message);
   }
 };
-// get selected breed selected using Fetch
+// get breeds using Axios
+const getBreedsUsingAxios = async () => {
+  try {
+    const response = await axiosInstance.get("/breeds");
+    let data = response.data;
+    return data;
+  } catch (error) {
+    console.error("❌ Error - getBreedsUsingAxios : ", error.message);
+  }
+};
+// get selected breed selected using Axios
 const getSelectedBreedUsingAxios = async (selectedValue) => {
   try {
     const response = await axiosInstance.get(
@@ -347,8 +332,25 @@ const createInfoDumpElements = (breed) => {
   }
   $infoDump.appendChild($clone);
 };
+// Define the progress handler function
+const handleDownloadProgress = (progressEvent) => {
+  if (progressEvent.lengthComputable) {
+    const percentCompleted = Math.round(
+      (progressEvent.loaded * 100) / progressEvent.total
+    );
+    $progressBar.style.width = `${percentCompleted}%`;
+    console.log(`📊 Download progress: ${percentCompleted}%`);
+  } else {
+    $progressBar.style.width = `100%`;
+    console.log(
+      `📦 Download progress: ${progressEvent.loaded} bytes loaded (total unknown)`
+    );
+  }
+};
+const handleGetFavorites = async () => {};
 (function () {
   initialLoad();
 })();
 // Select breed option eventListener
 $breedSelect.addEventListener("change", handleBreedSelected);
+$getFavoritesBtn.addEventListener("click", handleGetFavorites);
