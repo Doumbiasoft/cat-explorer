@@ -119,6 +119,7 @@ const initialLoad = async () => {
   let data = await getBreedsUsingFetch();
   loadBreedOptions(data);
 };
+// Populate select options with breeds
 const loadBreedOptions = (data) => {
   const option = document.createElement("option");
   option.value = "";
@@ -137,6 +138,7 @@ const loadBreedOptions = (data) => {
   Carousel.clear();
   Carousel.start();
 };
+// get breeds using Fetch
 const getBreedsUsingFetch = async () => {
   try {
     const response = await fetch(`${baseURL}/breeds`, {
@@ -148,6 +150,7 @@ const getBreedsUsingFetch = async () => {
     console.error("❌ Error - getBreedsUsingFetch : ", error.message);
   }
 };
+// get selected breed selected using Fetch
 const getSelectedBreedUsingFetch = async (selectedValue) => {
   try {
     const response = await fetch(
