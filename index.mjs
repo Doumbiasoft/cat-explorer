@@ -129,7 +129,7 @@ const loadBreedOptions = (data) => {
       //skip any breeds that do not have an image
       if (!breed.image) continue;
       option.value = breed.id;
-      option.innerHTML = `${breed.name}`;
+      option.textContent = `${breed.name}`;
       $breedSelect.appendChild(option);
     }
     Carousel.clear();
